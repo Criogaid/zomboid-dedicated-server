@@ -43,7 +43,7 @@ COPY src /home/steam/
 
 # Install Python, and take ownership of rcon binary
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-minimal iputils-ping tzdata \
+        python3-minimal iputils-ping tzdata musl \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
