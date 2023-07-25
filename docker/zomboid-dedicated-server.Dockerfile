@@ -42,6 +42,8 @@ COPY --from=rcon /rcon /usr/bin/rcon
 # Copy the source files
 COPY --chown=steam:steam src /home/steam/
 
+USER root
+
 # Install Python, and take ownership of rcon binary
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-minimal iputils-ping tzdata musl \
