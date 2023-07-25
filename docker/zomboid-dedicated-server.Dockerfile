@@ -22,22 +22,28 @@
 #######################################################################
 
 # Base Image
-ARG BASE_IMAGE="docker.io/renegademaster/steamcmd-minimal:1.1.2"
+ARG BASE_IMAGE="docker.io/steamcmd/steamcmd:ubuntu-22"
+ARG RCON_IMAGE="docker.io/outdead/rcon:0.10.2"
+
+FROM ${RCON_IMAGE} as rcon
 
 FROM ${BASE_IMAGE}
 
 # Add metadata labels
 LABEL com.renegademaster.zomboid-dedicated-server.authors="Renegade-Master" \
-    com.renegademaster.zomboid-dedicated-server.contributors="JohnEarle, ramielrowe" \
-    com.renegademaster.zomboid-dedicated-server.source-repository="https://github.com/Renegade-Master/zomboid-dedicated-server" \
-    com.renegademaster.zomboid-dedicated-server.image-repository="https://hub.docker.com/renegademaster/zomboid-dedicated-server"
+    com.renegademaster.zomboid-dedicated-server.contributors="JohnEarle, ramielrowe, sknnr" \
+    com.renegademaster.zomboid-dedicated-server.source-repository="https://github.com/jsknnr/zomboid-dedicated-server" \
+    com.renegademaster.zomboid-dedicated-server.image-repository="https://hub.docker.com/sknnr/project-zomboid-server"
+
+# Copy rcon files
+COPY --from=rcon /rcon /usr/bin/rcon
 
 # Copy the source files
 COPY src /home/steam/
 
 # Install Python, and take ownership of rcon binary
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-minimal iputils-ping tzdata \
+        python3-minimal iputils-ping tzdata musl \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
