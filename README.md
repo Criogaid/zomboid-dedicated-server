@@ -2,19 +2,16 @@
 
 ## Disclaimer
 
+**Fork Note:** This repository is a fork from https://github.com/Renegade-Master/zomboid-dedicated-server . At the time of writing July/25/2023 the source repository had not been updated in quite some time so I have forked it and made some changes to publish a working image. The below readme, originally written by Renegade-Master has been updated by me to reflect any changes that I have made and point to the correct image repositories that I am using.
+
 **Note:** This image is not officially supported by Valve, nor by The Indie Stone.
 
 If issues are encountered, please report them on
-the [GitHub repository](https://github.com/Renegade-Master/zomboid-dedicated-server/issues/new/choose)
+the [GitHub repository](https://github.com/jsknnr/zomboid-dedicated-server/issues/new/choose)
 
 ## Badges
 
-[![Build and Test Server Image](https://github.com/Renegade-Master/zomboid-dedicated-server/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/Renegade-Master/zomboid-dedicated-server/actions/workflows/docker-build.yml)
-[![Docker Repository on Quay](https://quay.io/repository/renegade_master/zomboid-dedicated-server/status "Docker Repository on Quay")](https://quay.io/repository/renegade_master/zomboid-dedicated-server)
-
-![Docker Image Version (latest by date)](https://img.shields.io/docker/v/renegademaster/zomboid-dedicated-server?label=Latest%20Version)
-![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/renegademaster/zomboid-dedicated-server?label=Image%20Size)
-![DockerHub Pulls](https://img.shields.io/docker/pulls/renegademaster/zomboid-dedicated-server?label=DockerHub%20Pull%20Count)
+[![Build and Test Server Image](https://https://github.com/jsknnr/zomboid-dedicated-server/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/jsknnr/zomboid-dedicated-server/actions/workflows/docker-build.yml)
 
 ## Description
 
@@ -30,7 +27,7 @@ Bare-Minimum instructions to get a server running:
 
 ```shell
 # Pull the latest image:
-docker pull renegademaster/zomboid-dedicated-server:latest
+docker pull sknnr/project-zomboid-server
 
 # Make two folders
 mkdir ZomboidConfig ZomboidDedicatedServer
@@ -41,7 +38,7 @@ docker run --detach \
     --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
     --publish 16261:16261/udp --publish 16262:16262/udp \
     --name zomboid-server \
-    docker.io/renegademaster/zomboid-dedicated-server:latest
+    docker.io/sknnr/project-zomboid-server:latest
 ```
 
 The default behaviour of the Container is not to automatically restart after a crash to give the user time to investigate the cause of the issue. You may however want to change the [restart policy](https://docs.docker.com/engine/reference/run/#restart-policies---restart) to automatically recover from an unexpected failure. The following options will help to recover from such a situation:
@@ -58,21 +55,20 @@ works, and makes it less likely that there will be a version released that does 
 are changed and checked after starting the server to verify that it is possible for a user to configure their instance.
 Custom Ports and Remote RCON commands are also used during the validation to ensure that the user can host the server
 using any Port combination of their choice. You can view the previous Action
-runs [here](https://github.com/Renegade-Master/zomboid-dedicated-server/actions/workflows/docker-build.yml).
+runs [here](https://github.com/jsknnr/zomboid-dedicated-server/actions/workflows/docker-build.yml).
 
 ## Links
 
 ### Source:
 
-- [GitHub Repository](https://github.com/Renegade-Master/zomboid-dedicated-server)
+- [GitHub Repository](https://github.com/jsknnr/zomboid-dedicated-server)
 
 ### Images:
 
 | Provider                                                                                                               | Image                                               | Pull Command                                                                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [GitHub Packages](https://github.com/Renegade-Master/zomboid-dedicated-server/pkgs/container/zomboid-dedicated-server) | `ghcr.io/renegade-master/zomboid-dedicated-server`  | `docker pull ghcr.io/renegade-master/zomboid-dedicated-server:x.y.z`<br/>`docker pull ghcr.io/renegade-master/zomboid-dedicated-server:latest`   |
-| [DockerHub](https://hub.docker.com/r/renegademaster/zomboid-dedicated-server)                                          | `docker.io/renegademaster/zomboid-dedicated-server` | `docker pull docker.io/renegademaster/zomboid-dedicated-server:x.y.z`<br/>`docker pull docker.io/renegademaster/zomboid-dedicated-server:latest` |
-| [Red Hat Quay](https://quay.io/repository/renegade_master/zomboid-dedicated-server)                                    | `quay.io/renegade_master/zomboid-dedicated-server`  | `docker pull quay.io/renegade_master/zomboid-dedicated-server:x.y.z`<br/>`docker pull quay.io/renegade_master/zomboid-dedicated-server:latest`   |
+| [DockerHub](https://hub.docker.com/r/sknnr/project-zomboid-server)                                          | `docker.io/sknnr/project-zomboid-server` | `docker pull docker.io/sknnr/project-zomboid-server:x.y.z`<br/>`docker pull docker.io/sknnr/project-zomboid-server:latest` |
+
 
 ### External Resources:
 
@@ -192,16 +188,16 @@ The following are instructions for running the server using the Docker image.
     - Pull the image from DockerHub:
 
       ```shell
-      docker pull renegademaster/zomboid-dedicated-server:<tagname>
+      docker pull sknnr/project-zomboid-server:<tagname>
       ```
 
     - Or alternatively, build the image:
 
       ```shell
-      git clone https://github.com/Renegade-Master/zomboid-dedicated-server.git \
+      git clone https://https://github.com/jsknnr/zomboid-dedicated-server.git \
           && cd zomboid-dedicated-server
 
-      docker build -t docker.io/renegademaster/zomboid-dedicated-server:<tag> -f docker/zomboid-dedicated-server.Dockerfile .
+      docker build -t docker.io/sknnr/project-zomboid-server:<tag> -f docker/zomboid-dedicated-server.Dockerfile .
       ```
 
 2. Run the container:
@@ -240,7 +236,7 @@ The following are instructions for running the server using the Docker image.
        [--env=STEAM_VAC=<value>] \
        [--env=TZ=<value>] \
        [--env=USE_STEAM=<value>] \
-       docker.io/renegademaster/zomboid-dedicated-server[:<tagname>]
+       docker.io/sknnr/project-zomboid-server[:<tagname>]
    ```
 
 3. Optionally, reattach the terminal to the log output (**\*Note**: this is not an Interactive Terminal\*)
@@ -258,7 +254,7 @@ The following are instructions for running the server using Docker-Compose.
 1. Download the repository:
 
    ```shell
-   git clone https://github.com/Renegade-Master/zomboid-dedicated-server.git \
+   git clone https://github.com/jsknnr/zomboid-dedicated-server.git \
        && cd zomboid-dedicated-server
    ```
 
