@@ -55,7 +55,8 @@ jobs:
       - name: Make Directories
         run: |
           mkdir ZomboidConfig ZomboidDedicatedServer
-          chown -R 1000:1000 ZomboidConfig ZomboidDedicatedServer
+          whoami && id
+          sudo chown -R 1000:1000 ZomboidConfig ZomboidDedicatedServer
 
       #######################
       # Docker Build System #
