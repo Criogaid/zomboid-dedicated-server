@@ -59,6 +59,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get remove --purge --auto-remove -y \
     && rm -rf /var/lib/apt/lists/*
 
+ENV USER=steam
+ENV HOME=/home/steam
+
 USER steam
 
 # Run the setup script
