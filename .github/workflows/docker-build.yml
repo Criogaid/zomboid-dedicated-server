@@ -63,7 +63,7 @@ jobs:
         run: |
           docker build \
           --file docker/zomboid-dedicated-server.Dockerfile \
-          --tag docker.io/renegademaster/zomboid-dedicated-server:${{ steps.variables.outputs.datetime }} \
+          --tag docker.io/sknnr/project-zomboid-server:${{ steps.variables.outputs.datetime }} \
           .
 
       - name: Test Run the Docker Image
@@ -97,7 +97,7 @@ jobs:
             --env=SERVER_NAME="GitHubActionTest" \
             --env=SERVER_PASSWORD="github_action_test_password" \
             --env=UDP_PORT="25499" \
-            docker.io/renegademaster/zomboid-dedicated-server:${{ steps.variables.outputs.datetime }} \
+            docker.io/sknnr/project-zomboid-server:${{ steps.variables.outputs.datetime }} \
             2>&1 | tee ./docker-log.log
 
       ###############################
@@ -150,7 +150,7 @@ jobs:
         run: |
           BUILDAH_LAYERS=true buildah bud \
           --file docker/zomboid-dedicated-server.Dockerfile \
-          --tag docker.io/renegademaster/zomboid-dedicated-server:${{ steps.variables.outputs.datetime }} \
+          --tag docker.io/sknnr/project-zomboid-server:${{ steps.variables.outputs.datetime }} \
           .
 
       - name: Test Run the Podman Image
@@ -184,7 +184,7 @@ jobs:
             --env=SERVER_NAME="GitHubActionTest" \
             --env=SERVER_PASSWORD="github_action_test_password" \
             --env=UDP_PORT="25499" \
-            docker.io/renegademaster/zomboid-dedicated-server:${{ steps.variables.outputs.datetime }} \
+            docker.io/sknnr/project-zomboid-server:${{ steps.variables.outputs.datetime }} \
             2>&1 | tee ./docker-log.log
 
       - name: Investigate File Structure
