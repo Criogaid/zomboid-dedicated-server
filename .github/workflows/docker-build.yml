@@ -53,7 +53,9 @@ jobs:
           chmod +x src/run_server.sh
 
       - name: Make Directories
-        run: mkdir ZomboidConfig ZomboidDedicatedServer
+        run: |
+          mkdir ZomboidConfig ZomboidDedicatedServer
+          chown -R 1000:1000 ZomboidConfig ZomboidDedicatedServer
 
       #######################
       # Docker Build System #
