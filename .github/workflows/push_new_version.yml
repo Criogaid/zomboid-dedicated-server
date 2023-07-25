@@ -66,25 +66,25 @@ jobs:
           if [[ ${{ github.event.inputs.builder }} == "buildah" ]]; then
             BUILDAH_LAYERS=true buildah bud \
               --file docker/zomboid-dedicated-server.Dockerfile \
-              --tag localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }} \
+              --tag localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
               .
           elif [[ ${{ github.event.inputs.builder }} == "docker" ]]; then
             docker build \
               --file docker/zomboid-dedicated-server.Dockerfile \
-              --tag localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }} \
+              --tag localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
               .
           fi
 
       - name: Push the Image to Local Container Registry
         run: |
           if [[ ${{ github.event.inputs.builder }} == "buildah" ]]; then
-            buildah push localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }}
+            buildah push localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
           elif [[ ${{ github.event.inputs.builder }} == "docker" ]]; then
-            docker push localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }}
+            docker push localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
           fi
 
       - name: Inspect the Image
-        run: skopeo inspect --tls-verify=false docker://localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }}
+        run: skopeo inspect --tls-verify=false docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
 
       - name: Push new Image Tags
         run: |
@@ -93,10 +93,10 @@ jobs:
 
             printf "\nPushing DockerHub Image...\n"
             skopeo copy --src-tls-verify=false --dest-creds ${{ secrets.DOCKER_USER }}:${{ secrets.DOCKER_TOKEN }} \
-              docker://localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }} \
+              docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
               docker://docker.io/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
             skopeo copy --src-tls-verify=false --dest-creds ${{ secrets.DOCKER_USER }}:${{ secrets.DOCKER_TOKEN }} \
-              docker://localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }} \
+              docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
               docker://docker.io/${{ steps.variables.outputs.dkimagepath }}:latest
 
           else
@@ -105,10 +105,10 @@ jobs:
             command=$(cat << EOF
           printf "\nPushing DockerHub Image...\n"
           skopeo copy --src-tls-verify=false --dest-creds ${{ secrets.DOCKER_USER }}:${{ secrets.DOCKER_TOKEN }} \
-            docker://localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }} \
+            docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
             docker://docker.io/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
           skopeo copy --src-tls-verify=false --dest-creds ${{ secrets.DOCKER_USER }}:${{ secrets.DOCKER_TOKEN }} \
-            docker://localhost:5000/${{ steps.variables.outputs.ghimagepath }}:${{ github.event.inputs.tag }} \
+            docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
             docker://docker.io/${{ steps.variables.outputs.dkimagepath }}:latest
           EOF
           )
