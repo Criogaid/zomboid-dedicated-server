@@ -23,29 +23,18 @@
 # Updated by: sknnr
 
 # Images
-ARG BASE_IMAGE="docker.io/steamcmd/steamcmd:ubuntu-22"
+ARG BASE_IMAGE="docker.io/cm2network/steamcmd:latest"
 ARG RCON_IMAGE="docker.io/outdead/rcon:0.10.2"
 
 FROM ${RCON_IMAGE} as rcon
 
 FROM ${BASE_IMAGE}
 
-ARG UID=1000
-ARG GID=1000
-
 # Add metadata labels
 LABEL com.renegademaster.zomboid-dedicated-server.authors="Renegade-Master" \
     com.renegademaster.zomboid-dedicated-server.contributors="JohnEarle, ramielrowe, sknnr" \
     com.renegademaster.zomboid-dedicated-server.source-repository="https://github.com/jsknnr/zomboid-dedicated-server" \
     com.renegademaster.zomboid-dedicated-server.image-repository="https://hub.docker.com/sknnr/project-zomboid-server"
-
-# Create steam user
-RUN groupadd steam \
-    --gid ${GID}; \
-    useradd steam --create-home \
-    --uid ${UID} \
-    --gid ${GID} \
-    --home-dir /home/steam
 
 # Copy rcon files
 COPY --from=rcon /rcon /usr/bin/rcon
@@ -58,9 +47,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-minimal iputils-ping tzdata musl \
     && apt-get remove --purge --auto-remove -y \
     && rm -rf /var/lib/apt/lists/*
-
-ENV USER=steam
-ENV HOME=/home/steam
 
 USER steam
 
