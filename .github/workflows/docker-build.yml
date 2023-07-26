@@ -54,7 +54,7 @@ jobs:
 
       - name: Make Directories
         run: |
-          mkdir ZomboidConfig ZomboidDedicatedServer
+          mkdir -p ZomboidConfig/mods ZomboidDedicatedServer
           whoami && id
           sudo chown -R 1000:1000 ZomboidConfig ZomboidDedicatedServer
 

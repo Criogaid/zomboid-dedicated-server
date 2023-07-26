@@ -24,7 +24,7 @@
 
 # Images
 ARG BASE_IMAGE="docker.io/cm2network/steamcmd:latest"
-ARG RCON_IMAGE="docker.io/outdead/rcon:0.10.2"
+ARG RCON_IMAGE="docker.io/outdead/rcon:latest"
 
 FROM ${RCON_IMAGE} as rcon
 
