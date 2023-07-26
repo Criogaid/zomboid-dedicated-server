@@ -171,7 +171,7 @@ jobs:
             --rm \
             --name zomboid-dedicated-server \
             --user 1000:1000 \
-            --userns=keep-id
+            --userns=keep-id \
             --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
             --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
             --env=AUTOSAVE_INTERVAL="16" \
