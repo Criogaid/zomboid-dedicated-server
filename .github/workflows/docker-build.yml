@@ -63,9 +63,9 @@ jobs:
         run: |
           mkdir -p ZomboidConfig/mods ZomboidDedicatedServer
           podman unshare cat /proc/self/uid_map
-          podman unshare chown 1001:1000 $(pwd)/ZomboidDedicatedServer
-          podman unshare chown 1001:1000 $(pwd)/ZomboidConfig
-          podman unshare chown 1001:1000 $(pwd)/ZomboidConfig/mods
+          podman unshare chown 1000:1000 $(pwd)/ZomboidDedicatedServer
+          podman unshare chown 1000:1000 $(pwd)/ZomboidConfig
+          podman unshare chown 1000:1000 $(pwd)/ZomboidConfig/mods
           podman unshare cat /proc/self/uid_map
           ls -ald $(pwd)
 
