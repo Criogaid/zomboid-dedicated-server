@@ -42,7 +42,7 @@ function shutdown() {
 # Start the Server
 function start_server() {
     printf "\n### Starting Project Zomboid Server...\n"
-    ls -alh $BASE_GAME_DIR
+
     timeout "$TIMEOUT" "$BASE_GAME_DIR"/start-server.sh \
         -cachedir="$CONFIG_DIR" \
         -adminusername "$ADMIN_USERNAME" \
@@ -134,9 +134,6 @@ function test_first_run() {
 function update_server() {
     printf "\n### Updating Project Zomboid Server...\n"
 
-    ls -ald
-    ls -ald /home/steam
-
     /home/steam/steamcmd/steamcmd.sh +runscript "$STEAM_INSTALL_FILE"
 
     printf "\n### Project Zomboid Server updated.\n"
@@ -145,9 +142,7 @@ function update_server() {
 # Apply user configuration to the server
 function apply_preinstall_config() {
     printf "\n### Applying Pre Install Configuration...\n"
-    ls -alh /home/steam
-    ls -alh /home/steam/Zomboid
-    ls -alh /home/steam/ZomboidDedicatedServer
+
     # Set the selected game version
     sed -i "s/beta .* /beta $GAME_VERSION /g" "$STEAM_INSTALL_FILE"
 

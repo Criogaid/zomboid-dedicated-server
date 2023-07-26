@@ -62,12 +62,10 @@ jobs:
         if: matrix.system == 'podman' 
         run: |
           mkdir -p ZomboidConfig/mods ZomboidDedicatedServer
-          podman unshare cat /proc/self/uid_map
           podman unshare chown 1000:1000 $(pwd)/ZomboidDedicatedServer
           podman unshare chown 1000:1000 $(pwd)/ZomboidConfig
           podman unshare chown 1000:1000 $(pwd)/ZomboidConfig/mods
-          podman unshare cat /proc/self/uid_map
-          ls -ald $(pwd)
+
 
       #######################
       # Docker Build System #
@@ -172,7 +170,6 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: |
-          ls -ald .
           # Start a timed shutdown signal
           (sleep 360 && podman exec \
             zomboid-dedicated-server bash -c \
