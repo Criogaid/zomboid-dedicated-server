@@ -63,10 +63,11 @@ jobs:
         run: |
           mkdir -p ZomboidConfig/mods ZomboidDedicatedServer
           podman unshare cat /proc/self/uid_map
-          podman unshare chown 1000:1000 $(pwd)/ZomboidDedicatedServer
-          podman unshare chown 1000:1000 $(pwd)/ZomboidConfig
+          podman unshare chown 1001:1000 $(pwd)/ZomboidDedicatedServer
+          podman unshare chown 1001:1000 $(pwd)/ZomboidConfig
+          podman unshare chown 1001:1000 $(pwd)/ZomboidConfig/mods
           podman unshare cat /proc/self/uid_map
-          ls -ald .
+          ls -ald $(pwd)
 
       #######################
       # Docker Build System #
@@ -181,7 +182,6 @@ jobs:
           podman run \
             --rm \
             --name zomboid-dedicated-server \
-            --userns=keep-id \
             --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
             --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
             --env=AUTOSAVE_INTERVAL="16" \
