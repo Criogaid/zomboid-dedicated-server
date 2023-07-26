@@ -52,8 +52,20 @@ jobs:
           chmod +x src/install_server.scmd
           chmod +x src/run_server.sh
 
-      - name: Make Directories
-        run: mkdir ZomboidConfig ZomboidDedicatedServer
+      - name: Make Docker Directories
+        if: matrix.system == 'docker' || matrix.system == 'docker-compose'
+        run: |
+          mkdir -p ZomboidConfig/mods ZomboidDedicatedServer
+          sudo chown -R 1000:1000 ZomboidConfig ZomboidDedicatedServer
+
+      - name: Make Podman Directories
+        if: matrix.system == 'podman' 
+        run: |
+          mkdir -p ZomboidConfig/mods ZomboidDedicatedServer
+          podman unshare chown 1000:1000 $(pwd)/ZomboidDedicatedServer
+          podman unshare chown 1000:1000 $(pwd)/ZomboidConfig
+          podman unshare chown 1000:1000 $(pwd)/ZomboidConfig/mods
+
 
       #######################
       # Docker Build System #

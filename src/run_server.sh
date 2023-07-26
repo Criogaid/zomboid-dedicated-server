@@ -42,6 +42,7 @@ function shutdown() {
 # Start the Server
 function start_server() {
     printf "\n### Starting Project Zomboid Server...\n"
+
     timeout "$TIMEOUT" "$BASE_GAME_DIR"/start-server.sh \
         -cachedir="$CONFIG_DIR" \
         -adminusername "$ADMIN_USERNAME" \
@@ -133,7 +134,7 @@ function test_first_run() {
 function update_server() {
     printf "\n### Updating Project Zomboid Server...\n"
 
-    steamcmd +runscript "$STEAM_INSTALL_FILE"
+    /home/steam/steamcmd/steamcmd.sh +runscript "$STEAM_INSTALL_FILE"
 
     printf "\n### Project Zomboid Server updated.\n"
 }

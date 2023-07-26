@@ -19,7 +19,7 @@ on:
         options:
           - buildah
           - docker
-        default: "buildah"
+        default: "docker"
 
 defaults:
   run:

@@ -20,10 +20,11 @@
 #       server.
 #   License: GNU General Public License v3.0 (see LICENSE)
 #######################################################################
+# Updated by: sknnr
 
-# Base Image
-ARG BASE_IMAGE="docker.io/steamcmd/steamcmd:ubuntu-22"
-ARG RCON_IMAGE="docker.io/outdead/rcon:0.10.2"
+# Images
+ARG BASE_IMAGE="docker.io/cm2network/steamcmd:latest"
+ARG RCON_IMAGE="docker.io/outdead/rcon:latest"
 
 FROM ${RCON_IMAGE} as rcon
 
@@ -39,13 +40,17 @@ LABEL com.renegademaster.zomboid-dedicated-server.authors="Renegade-Master" \
 COPY --from=rcon /rcon /usr/bin/rcon
 
 # Copy the source files
-COPY src /home/steam/
+COPY --chown=steam:steam src /home/steam/
+
+USER root
 
 # Install Python, and take ownership of rcon binary
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-minimal iputils-ping tzdata musl \
-    && apt-get autoremove -y \
+    python3-minimal iputils-ping tzdata musl \
+    && apt-get remove --purge --auto-remove -y \
     && rm -rf /var/lib/apt/lists/*
+
+USER steam
 
 # Run the setup script
 ENTRYPOINT ["/bin/bash", "/home/steam/run_server.sh"]
