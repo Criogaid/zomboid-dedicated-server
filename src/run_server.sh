@@ -134,8 +134,8 @@ function test_first_run() {
 function update_server() {
     printf "\n### Updating Project Zomboid Server...\n"
 
-    ls -alh
-    ls -alh /home/steam
+    ls -ald
+    ls -ald /home/steam
 
     /home/steam/steamcmd/steamcmd.sh +runscript "$STEAM_INSTALL_FILE"
 
