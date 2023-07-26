@@ -1,5 +1,26 @@
 # Project Zomboid Dedicated Server
 
+![Build and Test Server Image](https://github.com/jsknnr/zomboid-dedicated-server/actions/workflows/docker-build.yml/badge.svg?branch=main)
+
+## Table of Contents
+1. [Disclaimer](#disclaimer)
+2. [Description](#description)
+3. [Quality Assurance](#assurance--testing)
+4. [Links](#links)
+    1. [Source](#source)
+    2. [Images](#images)
+    3. [External Resources](#external-resources)
+5. [Prerequisites](#prerequisites)
+    1. [Directories](#directories)
+    2. [Ports](#ports)
+6. [Instructions](#instructions)
+    1. [Optional Environment Variables](#optional-environment-variables)
+    2. [Config File Environment Variables](#config-file-environment-variables)
+    3. [Podman](#podman)
+    4. [Docker](#docker)
+    5. [Docker Compose](#docker-compose) 
+
+
 ## Disclaimer
 
 **Fork Note:** This repository is a fork from https://github.com/Renegade-Master/zomboid-dedicated-server . At the time of writing July/25/2023 the source repository had not been updated in quite some time so I have forked it and made some changes to publish a working image. The below readme, originally written by Renegade-Master has been updated by me to reflect any changes that I have made and point to the correct image repositories that I am using.
@@ -9,14 +30,14 @@
 If issues are encountered, please report them on
 the [GitHub repository](https://github.com/jsknnr/zomboid-dedicated-server/issues/new/choose)
 
-## Badges
-
-[![Build and Test Server Image](https://https://github.com/jsknnr/zomboid-dedicated-server/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/jsknnr/zomboid-dedicated-server/actions/workflows/docker-build.yml)
-
 ## Description
 
 Dedicated Server for Project Zomboid using Docker, and optionally Docker-Compose.
 Built almost from scratch to be the smallest Project Zomboid Dedicated Server around!
+
+**This container now runs rootless**, due to this, care must be taken when mounting volumes into the container or the process in the container will not be able to access the mounted volumes.
+
+The container runs as UID/GID 1000:1000
 
 **Note:** This Image is "rootless", and therefore should not be run as the `root` user.
 Attempting to do so will prevent the server from starting (
@@ -31,6 +52,7 @@ docker pull sknnr/project-zomboid-server
 
 # Make two folders
 mkdir ZomboidConfig ZomboidDedicatedServer
+chown -R 1000:1000 ZomboidConfig ZomboidDedicatedServer
 
 # Run the server (with bare minimum options):
 docker run --detach \
@@ -86,6 +108,21 @@ Two directories are required to be present on the host:
 | ------------------ | ------------------------ | ---------------------------------------------------- |
 | Configuration Data | `ZomboidConfig`          | For storing the server configuration and save files. |
 | Installation Data  | `ZomboidDedicatedServer` | For storing the server game data.                    |
+
+The container now runs rootless as UID:GID 1000:1000. With that being said, you will need to make sure that user has read and 
+write permission to those 2 directories on the host machine or the process inside the container will not be able to access data 
+in those directories and the container **will fail to start**.
+
+```shell
+#docker example:
+mkdir ZomboidConfig ZomboidDedicatedServer
+chown -R 1000:1000 $(pwd)/ZomboidConfig $(pwd)/ZomboidDedicatedServer
+```
+```shell
+#podman example:
+mkdir ZomboidConfig ZomboidDedicatedServer
+podman unshare chown -R 1000:1000 $(pwd)/ZomboidDedicatedServer $(pwd)/ZomboidConfig
+```
 
 These folders must be created in the directory that you intend to run the Docker image from. This could be a folder that
 you have created in some kind of "server directory", or it could be the root of this repository after you have cloned it
@@ -179,6 +216,78 @@ Any other values *can* and *should* be edited directly in the .ini file.
 | `SERVER_PASSWORD`   | Server password                                                                                                                         | Password              | [a-zA-Z0-9]+           |               |
 | `UDP_PORT`          | Additional Port for facilitating Client connections                                                                                     | SteamPort1            | 1000 - 65535           | 8766          |
 
+### Podman
+
+The following instructions are for running the container with Podman.
+
+1. Acquire the image locally:
+
+    - Pull the image from DockerHub:
+
+      ```shell
+      podman pull sknnr/project-zomboid-server:<tagname>
+      ```
+
+    - Or alternatively, build the image:
+
+      ```shell
+      git clone https://https://github.com/jsknnr/zomboid-dedicated-server.git \
+          && cd zomboid-dedicated-server
+
+      BUILDAH_LAYERS=true buildah bud \
+          --file docker/zomboid-dedicated-server.Dockerfile \
+          --tag docker.io/sknnr/project-zomboid-server:<tag> \
+          .
+      ```
+
+2. Run the container:
+
+   **\*Note**: Arguments inside square brackets are optional. If the default ports are to be overridden, then the
+   `published` ports below must also be changed\*
+
+   ```shell
+   mkdir ZomboidConfig ZomboidDedicatedServer
+   podman unshare chown -R 1000:1000 $(pwd)/ZomboidConfig $(pwd)/ZomboidDedicatedServer
+
+   podman run --detach \
+       --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
+       --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
+       --publish 16261:16261/udp --publish 16262:16262/udp [--publish 27015:27015/tcp] \
+       --name zomboid-server \
+       [--restart=no] \
+       [--env=ADMIN_PASSWORD=<value>] \
+       [--env=ADMIN_USERNAME=<value>] \
+       [--env=AUTOSAVE_INTERVAL=<value>] \
+       [--env=BIND_IP=<value>] \
+       [--env=GAME_PORT=<value>] \
+       [--env=GAME_VERSION=<value>] \
+       [--env=GC_CONFIG=<value>] \
+       [--env=MAP_NAMES=<value>] \
+       [--env=MAX_PLAYERS=<value>] \
+       [--env=MAX_RAM=<value>] \
+       [--env=MOD_NAMES=<value>] \
+       [--env=MOD_WORKSHOP_IDS=<value>] \
+       [--env=PAUSE_ON_EMPTY=<value>] \
+       [--env=PUBLIC_SERVER=<value>] \
+       [--env=QUERY_PORT=<value>] \
+       [--env=RCON_PASSWORD=<value>] \
+       [--env=RCON_PORT=<value>] \
+       [--env=SERVER_NAME=<value>] \
+       [--env=SERVER_PASSWORD=<value>] \
+       [--env=STEAM_VAC=<value>] \
+       [--env=TZ=<value>] \
+       [--env=USE_STEAM=<value>] \
+       docker.io/sknnr/project-zomboid-server[:<tagname>]
+   ```
+
+3. Optionally, reattach the terminal to the log output (**\*Note**: this is not an Interactive Terminal\*)
+
+   ```shell
+   podman logs --follow zomboid-server
+   ```
+
+4. Once you see `LuaNet: Initialization [DONE]` in the console, people can start to join the server.
+
 ### Docker
 
 The following are instructions for running the server using the Docker image.
@@ -207,6 +316,7 @@ The following are instructions for running the server using the Docker image.
 
    ```shell
    mkdir ZomboidConfig ZomboidDedicatedServer
+   chown -R 1000:1000 $(pwd)/ZomboidConfig $(pwd)/ZomboidDedicatedServer
 
    docker run --detach \
        --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
@@ -269,6 +379,7 @@ The following are instructions for running the server using Docker-Compose.
 
       ```shell
       mkdir ZomboidConfig ZomboidDedicatedServer
+      chown -R 1000:1000 $(pwd)/ZomboidConfig $(pwd)/ZomboidDedicatedServer
       ```
 
     - Pull the image from DockerHub:
