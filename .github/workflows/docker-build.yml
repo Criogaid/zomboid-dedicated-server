@@ -163,6 +163,10 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: |
+          podman unshare cat /proc/self/uid_map
+          podman unshare chown 1000:1000 $(pwd)/ZomboidDedicatedServer
+          podman unshare chown 1000:1000 $(pwd)/ZomboidConfig
+          ls -ald ./
           # Start a timed shutdown signal
           (sleep 360 && podman exec \
             zomboid-dedicated-server bash -c \
