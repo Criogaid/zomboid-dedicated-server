@@ -170,8 +170,9 @@ jobs:
           podman run \
             --rm \
             --name zomboid-dedicated-server \
-            --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer:U \
-            --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid:U \
+            --user 1000:1000 \
+            --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
+            --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
             --env=AUTOSAVE_INTERVAL="16" \
             --env=DEFAULT_PORT="25496" \
             --env=GC_CONFIG="G1GC" \

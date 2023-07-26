@@ -46,7 +46,7 @@ USER root
 
 # Install Python, and take ownership of rcon binary
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-minimal iputils-ping tzdata musl \
+    python3-minimal iputils-ping tzdata musl \
     && apt-get remove --purge --auto-remove -y \
     && rm -rf /var/lib/apt/lists/*
 
