@@ -15,12 +15,15 @@
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #######################################################################
-#   Author: Renegade-Master
+#   Author: Renegade-Master，sknnr
 #   Description: Base image for running a Dedicated Project Zomboid
 #       server.
 #   License: GNU General Public License v3.0 (see LICENSE)
 #######################################################################
-# Updated by: sknnr
+#    Updated by: Criogaid
+#    Date of update: January 17, 2024
+#    Purpose of update: Compatibility with Chinese environment
+#######################################################################
 
 # Images
 ARG BASE_IMAGE="docker.io/cm2network/steamcmd:latest"
@@ -32,7 +35,7 @@ FROM ${BASE_IMAGE}
 
 # Add metadata labels
 LABEL com.renegademaster.zomboid-dedicated-server.authors="Renegade-Master" \
-    com.renegademaster.zomboid-dedicated-server.contributors="JohnEarle, ramielrowe, sknnr" \
+    com.renegademaster.zomboid-dedicated-server.contributors="JohnEarle, ramielrowe, sknnr, Criogaid" \
     com.renegademaster.zomboid-dedicated-server.source-repository="https://github.com/jsknnr/zomboid-dedicated-server" \
     com.renegademaster.zomboid-dedicated-server.image-repository="https://hub.docker.com/sknnr/project-zomboid-server"
 
@@ -45,10 +48,22 @@ COPY --chown=steam:steam src /home/steam/
 USER root
 
 # Install Python, and take ownership of rcon binary
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-minimal iputils-ping tzdata musl vim \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3-minimal \
+        iputils-ping \
+        tzdata \
+        musl \
+        vim \
+        locales \
+    && locale-gen en_US.UTF-8 \
     && apt-get remove --purge --auto-remove -y \
     && rm -rf /var/lib/apt/lists/*
+
+# Set language environment.
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
 
 USER steam
 
