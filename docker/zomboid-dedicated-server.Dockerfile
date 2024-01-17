@@ -15,7 +15,7 @@
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #######################################################################
-#   Author: Renegade-Master，sknnr
+#   Author: Renegade-Master, sknnr
 #   Description: Base image for running a Dedicated Project Zomboid
 #       server.
 #   License: GNU General Public License v3.0 (see LICENSE)
