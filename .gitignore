@@ -1,5 +1,6 @@
 ZomboidConfig/
 ZomboidDedicatedServer/
+.env
 .pi-subagents/
 __pycache__/
 *.py[cod]
