@@ -1,120 +1,188 @@
-name: Push New Version
+name: Update tested Project Zomboid image
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/push_new_version.yml"
+      - "docker/**"
+      - "scripts/**"
+      - "src/**"
+  schedule:
+    - cron: "17 8 * * *"
   workflow_dispatch:
     inputs:
-      tag:
-        description: "The semantic version to assign to the new Tag"
-        required: true
-        type: string
-      dryrun:
-        description: "Run the action without pushing anything"
-        required: true
+      force_rebuild:
+        description: Rebuild even when this source and Steam tuple already have a trace tag
+        required: false
         type: boolean
-        default: true
-      builder:
-        description: "The builder to use for the new Tag"
-        required: true
-        type: choice
-        options:
-          - buildah
-          - docker
-        default: "docker"
+        default: false
 
-defaults:
-  run:
-    shell: bash
+permissions:
+  contents: read
+
+concurrency:
+  group: zomboid-image-release
+  cancel-in-progress: false
+
+env:
+  IMAGE: docker.io/criogaid/zomboid-dedicated-server
 
 jobs:
-  tag_repo:
-    name: "Add a Tag to the Repo"
-    runs-on: ubuntu-latest
+  metadata:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      build_id: ${{ steps.resolve.outputs.build_id }}
+      manifest_id: ${{ steps.resolve.outputs.manifest_id }}
+      trace_tag: ${{ steps.decision.outputs.trace_tag }}
+      should_build: ${{ steps.decision.outputs.should_build }}
     steps:
-      - uses: actions/checkout@v3
-
-      - name: GitHub Tag
-        uses: mathieudutour/github-tag-action@v6.1
+      - uses: actions/checkout@v6
         with:
-          github_token: ${{ secrets.GH_TOKEN }}
-          custom_tag: ${{ github.event.inputs.tag }}
-          create_annotated_tag: true
-          dry_run: ${{ github.event.inputs.dryrun }}
+          persist-credentials: false
 
-  build_and_push_image:
-    name: "Build the new Image"
-    runs-on: ubuntu-latest
-    needs:
-      - tag_repo
-    steps:
-      - uses: actions/checkout@v3
+      - name: Resolve stable Steam tuple
+        id: resolve
+        run: python3 scripts/resolve-version.py --github-output "$GITHUB_OUTPUT"
 
-      - name: Set Variables
-        id: variables
+      - name: Decide whether to build
+        id: decision
+        env:
+          FORCE_REBUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.force_rebuild || false }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+          BUILD_ID: ${{ steps.resolve.outputs.build_id }}
+          MANIFEST_ID: ${{ steps.resolve.outputs.manifest_id }}
         run: |
-          echo "::set-output name=dkimagepath::sknnr/project-zomboid-server"
-          echo "::set-output name=datetime::$(date +%Y%m%dT%H%M%SZ)"
-
-      - name: Login to Image Repositories
-        run: |
-          docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_TOKEN }} docker.io
-
-      - name: Start Local Container Registry
-        run: podman run --rm --detach --publish 5000:5000 --name registry docker.io/registry
-
-      - name: Build the Image
-        run: |
-          if [[ ${{ github.event.inputs.builder }} == "buildah" ]]; then
-            BUILDAH_LAYERS=true buildah bud \
-              --file docker/zomboid-dedicated-server.Dockerfile \
-              --tag localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
-              .
-          elif [[ ${{ github.event.inputs.builder }} == "docker" ]]; then
-            docker build \
-              --file docker/zomboid-dedicated-server.Dockerfile \
-              --tag localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
-              .
-          fi
-
-      - name: Push the Image to Local Container Registry
-        run: |
-          if [[ ${{ github.event.inputs.builder }} == "buildah" ]]; then
-            buildah push localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
-          elif [[ ${{ github.event.inputs.builder }} == "docker" ]]; then
-            docker push localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
-          fi
-
-      - name: Inspect the Image
-        run: skopeo inspect --tls-verify=false docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
-
-      - name: Push new Image Tags
-        run: |
-          if [[ "${{ github.event.inputs.dryrun }}" == "false" ]]; then
-            printf "Pushing Image Tags\n"
-
-            printf "\nPushing DockerHub Image...\n"
-            skopeo copy --src-tls-verify=false --dest-creds ${{ secrets.DOCKER_USER }}:${{ secrets.DOCKER_TOKEN }} \
-              docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
-              docker://docker.io/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
-            skopeo copy --src-tls-verify=false --dest-creds ${{ secrets.DOCKER_USER }}:${{ secrets.DOCKER_TOKEN }} \
-              docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
-              docker://docker.io/${{ steps.variables.outputs.dkimagepath }}:latest
-
+          set -euo pipefail
+          TRACE_TAG="${VERSION}-b${BUILD_ID}-m${MANIFEST_ID}-g${GITHUB_SHA::12}"
+          SHOULD_BUILD=false
+          if [ "$GITHUB_EVENT_NAME" = "push" ] || [ "$FORCE_REBUILD" = "true" ]; then
+            SHOULD_BUILD=true
           else
-            printf "DryRun. Not pushing Git Tags. Printing commands...\n"
-
-            command=$(cat << EOF
-          printf "\nPushing DockerHub Image...\n"
-          skopeo copy --src-tls-verify=false --dest-creds ${{ secrets.DOCKER_USER }}:${{ secrets.DOCKER_TOKEN }} \
-            docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
-            docker://docker.io/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }}
-          skopeo copy --src-tls-verify=false --dest-creds ${{ secrets.DOCKER_USER }}:${{ secrets.DOCKER_TOKEN }} \
-            docker://localhost:5000/${{ steps.variables.outputs.dkimagepath }}:${{ github.event.inputs.tag }} \
-            docker://docker.io/${{ steps.variables.outputs.dkimagepath }}:latest
-          EOF
-          )
-
-            printf "%s\n" "${command}"
+            tag_digest() {
+              curl --retry 3 --retry-all-errors -fsSL \
+                "https://hub.docker.com/v2/repositories/criogaid/zomboid-dedicated-server/tags/$1/" 2>/dev/null \
+                | jq -r '.digest // empty' || true
+            }
+            TRACE_DIGEST=$(tag_digest "$TRACE_TAG")
+            VERSION_DIGEST=$(tag_digest "$VERSION")
+            LATEST_DIGEST=$(tag_digest latest)
+            if [ -z "$TRACE_DIGEST" ] \
+              || [ "$TRACE_DIGEST" != "$VERSION_DIGEST" ] \
+              || [ "$TRACE_DIGEST" != "$LATEST_DIGEST" ]; then
+              SHOULD_BUILD=true
+            fi
           fi
+          echo "trace_tag=$TRACE_TAG" >> "$GITHUB_OUTPUT"
+          echo "should_build=$SHOULD_BUILD" >> "$GITHUB_OUTPUT"
+          echo "Project Zomboid $VERSION, Steam build $BUILD_ID, Linux manifest $MANIFEST_ID"
+          echo "Trace tag: $TRACE_TAG; build: $SHOULD_BUILD"
 
-      - name: Stop the Local Container Registry
-        run: podman stop registry
+  build-test-publish:
+    needs: metadata
+    if: needs.metadata.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Check Docker Hub credentials
+        env:
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          test -n "$DOCKER_USERNAME" || { echo "Missing DOCKER_USERNAME secret" >&2; exit 1; }
+          test -n "$DOCKER_PASSWORD" || { echo "Missing DOCKER_PASSWORD secret" >&2; exit 1; }
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build local amd64 candidate
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/zomboid-dedicated-server.Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: zomboid-dedicated-server:candidate
+          build-args: |
+            PZ_VERSION=${{ needs.metadata.outputs.version }}
+            STEAM_BUILD_ID=${{ needs.metadata.outputs.build_id }}
+            LINUX_MANIFEST_ID=${{ needs.metadata.outputs.manifest_id }}
+            SOURCE_REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=zomboid-amd64
+          cache-to: type=gha,mode=max,scope=zomboid-amd64
+
+      - name: Install and smoke-test the current stable server
+        run: |
+          scripts/smoke-image.sh \
+            zomboid-dedicated-server:candidate \
+            "${{ needs.metadata.outputs.version }}" \
+            "${{ needs.metadata.outputs.build_id }}" \
+            "${{ needs.metadata.outputs.manifest_id }}"
+
+      - name: Ensure upstream metadata did not change during the smoke test
+        run: |
+          set -euo pipefail
+          read -r VERSION BUILD_ID MANIFEST_ID < <(python3 scripts/resolve-version.py --format tuple)
+          test "$VERSION" = "${{ needs.metadata.outputs.version }}"
+          test "$BUILD_ID" = "${{ needs.metadata.outputs.build_id }}"
+          test "$MANIFEST_ID" = "${{ needs.metadata.outputs.manifest_id }}"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Publish tested tags from one digest
+        env:
+          TRACE_TAG: ${{ needs.metadata.outputs.trace_tag }}
+          VERSION: ${{ needs.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker tag zomboid-dedicated-server:candidate "$IMAGE:$TRACE_TAG"
+          docker push "$IMAGE:$TRACE_TAG"
+          TRACE_DIGEST=$(docker buildx imagetools inspect "$IMAGE:$TRACE_TAG" --format '{{json .Manifest}}' | jq -r '.digest')
+          [[ "$TRACE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          docker buildx imagetools create --prefer-index=false \
+            --tag "$IMAGE:$TRACE_TAG" \
+            --tag "$IMAGE:$VERSION" \
+            --tag "$IMAGE:latest" \
+            "$IMAGE@$TRACE_DIGEST"
+          echo "Published tag set from immutable digest $TRACE_DIGEST"
+
+      - name: Verify published image contract
+        env:
+          TRACE_TAG: ${{ needs.metadata.outputs.trace_tag }}
+          VERSION: ${{ needs.metadata.outputs.version }}
+          BUILD_ID: ${{ needs.metadata.outputs.build_id }}
+          MANIFEST_ID: ${{ needs.metadata.outputs.manifest_id }}
+        run: |
+          set -euo pipefail
+          for _ in {1..20}; do
+            TRACE_JSON=$(curl -fsSL "https://hub.docker.com/v2/repositories/criogaid/zomboid-dedicated-server/tags/$TRACE_TAG/" || true)
+            VERSION_JSON=$(curl -fsSL "https://hub.docker.com/v2/repositories/criogaid/zomboid-dedicated-server/tags/$VERSION/" || true)
+            LATEST_JSON=$(curl -fsSL "https://hub.docker.com/v2/repositories/criogaid/zomboid-dedicated-server/tags/latest/" || true)
+            TRACE_DIGEST=$(jq -r '.digest // empty' <<< "$TRACE_JSON")
+            if [ -n "$TRACE_DIGEST" ] \
+              && [ "$TRACE_DIGEST" = "$(jq -r '.digest // empty' <<< "$VERSION_JSON")" ] \
+              && [ "$TRACE_DIGEST" = "$(jq -r '.digest // empty' <<< "$LATEST_JSON")" ]; then
+              break
+            fi
+            sleep 3
+          done
+          test -n "$TRACE_DIGEST"
+          test "$TRACE_DIGEST" = "$(jq -r '.digest' <<< "$VERSION_JSON")"
+          test "$TRACE_DIGEST" = "$(jq -r '.digest' <<< "$LATEST_JSON")"
+          jq -e '.images | length == 1 and .[0].os == "linux" and .[0].architecture == "amd64"' <<< "$TRACE_JSON"
+
+          LABELS=$(docker buildx imagetools inspect "$IMAGE:$TRACE_TAG" --format '{{json .Image.Config.Labels}}')
+          test "$(jq -r '."org.opencontainers.image.version"' <<< "$LABELS")" = "$VERSION"
+          test "$(jq -r '."io.criogaid.zomboid.steam-build-id"' <<< "$LABELS")" = "$BUILD_ID"
+          test "$(jq -r '."io.criogaid.zomboid.linux-manifest-id"' <<< "$LABELS")" = "$MANIFEST_ID"
+          echo "Published $IMAGE:$VERSION and latest at $TRACE_DIGEST (linux/amd64)"

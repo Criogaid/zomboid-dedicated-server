@@ -1,403 +1,147 @@
 # Project Zomboid Dedicated Server
 
-![Build and Test Server Image](https://github.com/jsknnr/zomboid-dedicated-server/actions/workflows/docker-build.yml/badge.svg?branch=main)
+Rootless Docker wrapper for the official Project Zomboid Dedicated Server distributed through Steam app `380870`.
 
-## Table of Contents
-1. [Disclaimer](#disclaimer)
-2. [Description](#description)
-3. [Quality Assurance](#assurance--testing)
-4. [Links](#links)
-    1. [Source](#source)
-    2. [Images](#images)
-    3. [External Resources](#external-resources)
-5. [Prerequisites](#prerequisites)
-    1. [Directories](#directories)
-    2. [Ports](#ports)
-6. [Instructions](#instructions)
-    1. [Optional Environment Variables](#optional-environment-variables)
-    2. [Config File Environment Variables](#config-file-environment-variables)
-    3. [Podman](#podman)
-    4. [Docker](#docker)
-    5. [Docker Compose](#docker-compose) 
+This project is not affiliated with Valve or The Indie Stone. The image contains SteamCMD and wrapper scripts; Project Zomboid server files are downloaded from Steam into a persistent volume when the container starts.
 
+## Platform support
 
-## Disclaimer
+Only `linux/amd64` is published. The official Linux server, bundled JRE, and native libraries are x86-64. ARM64 community solutions depend on FEX or Box64 emulation and are not published here as a native platform.
 
-**Fork Note:** This repository is a fork from https://github.com/Renegade-Master/zomboid-dedicated-server . At the time of writing July/25/2023 the source repository had not been updated in quite some time so I have forked it and made some changes to publish a working image. The below readme, originally written by Renegade-Master has been updated by me to reflect any changes that I have made and point to the correct image repositories that I am using.
+## Quick start
 
-**Note:** This image is not officially supported by Valve, nor by The Indie Stone.
+The container runs as UID/GID `1000:1000`. Create writable data directories and set a non-default administrator password before starting it.
 
-If issues are encountered, please report them on
-the [GitHub repository](https://github.com/jsknnr/zomboid-dedicated-server/issues/new/choose)
-
-## Description
-
-Dedicated Server for Project Zomboid using Docker, and optionally Docker-Compose.
-Built almost from scratch to be the smallest Project Zomboid Dedicated Server around!
-
-**This container now runs rootless**, due to this, care must be taken when mounting volumes into the container or the process in the container will not be able to access the mounted volumes.
-
-The container runs as UID/GID 1000:1000
-
-**Note:** This Image is "rootless", and therefore should not be run as the `root` user.
-Attempting to do so will prevent the server from starting (
-see [#8](https://github.com/Renegade-Master/zomboid-dedicated-server/issues/8)
-, [#14](https://github.com/Renegade-Master/zomboid-dedicated-server/issues/14)).
-
-Bare-Minimum instructions to get a server running:
-
-```shell
-# Pull the latest image:
-docker pull sknnr/project-zomboid-server
-
-# Make two folders
-mkdir ZomboidConfig ZomboidDedicatedServer
-chown -R 1000:1000 ZomboidConfig ZomboidDedicatedServer
-
-# Run the server (with bare minimum options):
-docker run --detach \
-    --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
-    --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
-    --publish 16261:16261/udp --publish 16262:16262/udp \
-    --name zomboid-server \
-    docker.io/sknnr/project-zomboid-server:latest
+```bash
+mkdir -p ZomboidConfig ZomboidDedicatedServer
+sudo chown -R 1000:1000 ZomboidConfig ZomboidDedicatedServer
+export ADMIN_PASSWORD='replace-with-a-strong-password'
+docker compose up -d
 ```
 
-The default behaviour of the Container is not to automatically restart after a crash to give the user time to investigate the cause of the issue. You may however want to change the [restart policy](https://docs.docker.com/engine/reference/run/#restart-policies---restart) to automatically recover from an unexpected failure. The following options will help to recover from such a situation:
+Watch the initial Steam download and server startup:
 
-- `--restart=unless-stopped` will restart the container every time that it exits unless the Container is stopped using the Docker/Podman API.
-- `--restart=on-failure[:max-retries]` will restart the container only if it exits with a non-zero exit code. Optionally, it can also be configured to only restart a fixed number of times to help prevent crash-loops.
-
-These same options can be set in the `docker-compose.yaml` file.
-
-### Assurance / Testing
-
-For every commit, the server is built and started briefly using GitHub Actions. This is to ensure that the server always
-works, and makes it less likely that there will be a version released that does not function. The main configurations
-are changed and checked after starting the server to verify that it is possible for a user to configure their instance.
-Custom Ports and Remote RCON commands are also used during the validation to ensure that the user can host the server
-using any Port combination of their choice. You can view the previous Action
-runs [here](https://github.com/jsknnr/zomboid-dedicated-server/actions/workflows/docker-build.yml).
-
-## Links
-
-### Source:
-
-- [GitHub Repository](https://github.com/jsknnr/zomboid-dedicated-server)
-
-### Images:
-
-| Provider                                                                                                               | Image                                               | Pull Command                                                                                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [DockerHub](https://hub.docker.com/r/sknnr/project-zomboid-server)                                          | `docker.io/sknnr/project-zomboid-server` | `docker pull docker.io/sknnr/project-zomboid-server:x.y.z`<br/>`docker pull docker.io/sknnr/project-zomboid-server:latest` |
-
-
-### External Resources:
-
-- [Dedicated Server Wiki](https://pzwiki.net/wiki/Dedicated_Server)
-- [Dedicated Server Configuration](https://pzwiki.net/wiki/Server_Settings)
-- [Steam DB Page](https://steamdb.info/app/380870/)
-
-## Prerequisites
-
-### Directories
-
-Two directories are required to be present on the host:
-
-| Name               | Directory                | Description                                          |
-| ------------------ | ------------------------ | ---------------------------------------------------- |
-| Configuration Data | `ZomboidConfig`          | For storing the server configuration and save files. |
-| Installation Data  | `ZomboidDedicatedServer` | For storing the server game data.                    |
-
-The container now runs rootless as UID:GID 1000:1000. With that being said, you will need to make sure that user has read and 
-write permission to those 2 directories on the host machine or the process inside the container will not be able to access data 
-in those directories and the container **will fail to start**.
-
-```shell
-#docker example:
-mkdir ZomboidConfig ZomboidDedicatedServer
-chown -R 1000:1000 $(pwd)/ZomboidConfig $(pwd)/ZomboidDedicatedServer
-```
-```shell
-#podman example:
-mkdir ZomboidConfig ZomboidDedicatedServer
-podman unshare chown -R 1000:1000 $(pwd)/ZomboidDedicatedServer $(pwd)/ZomboidConfig
+```bash
+docker compose logs -f
 ```
 
-These folders must be created in the directory that you intend to run the Docker image from. This could be a folder that
-you have created in some kind of "server directory", or it could be the root of this repository after you have cloned it
-down. **_If these folders are not present when the Docker image starts, you will get permissions errors_** (
-see [#8](https://github.com/Renegade-Master/zomboid-dedicated-server/issues/8)
-, [#14](https://github.com/Renegade-Master/zomboid-dedicated-server/issues/14)
-, [#17](https://github.com/Renegade-Master/zomboid-dedicated-server/issues/17)) because the Docker engine will create
-the folders at Container runtime. This creates them under the `root` user on the host which causes permissions
-conflicts.
+The container becomes healthy after the game log reports `*** SERVER STARTED ****`. A first installation needs about 15 GiB of free disk space while SteamCMD downloads and stages the server.
 
-The 'Configuration Data' folder is where the server configuration and save files are stored. This folder can be opened
-and edited just like if you were running the server without Docker. You can backup your save files, or edit the server
-configuration files. You should start the server once successfully before attempting to edit files in the 'Configuration
-Data' folder. Once the files are generated, it is safe to edit them. Most configuration option changes will require a
-restart of the server to properly take effect. Most of these settings are also configurable from the in-game Admin menu.
+### Docker CLI
 
-The 'Installation Data' folder is where the server game data is stored. This folder can be opened and edited, but a full
-restart of the server can sometimes reset changes to this folder during file verification. Therefore, the recommended
-way to change files that would be stored in this folder is to use the Environment Variables in the 'Optional Arguments'
-table provided by the Docker image.
+```bash
+docker run -d \
+  --name zomboid-dedicated-server \
+  --platform linux/amd64 \
+  --stop-timeout 90 \
+  -e ADMIN_PASSWORD='replace-with-a-strong-password' \
+  -p 16261:16261/udp \
+  -p 16262:16262/udp \
+  -v "$(pwd)/ZomboidDedicatedServer:/home/steam/ZomboidDedicatedServer" \
+  -v "$(pwd)/ZomboidConfig:/home/steam/Zomboid" \
+  docker.io/criogaid/zomboid-dedicated-server:latest
+```
 
-### Ports
+## Persistent data
 
-There are a total of three ports that can be utilised by the server, but only two are strictly required:
+| Container path | Contents |
+| --- | --- |
+| `/home/steam/ZomboidDedicatedServer` | Steam app files, appmanifest, Workshop content, tested-version marker |
+| `/home/steam/Zomboid` | Server INI files, saves, logs, database, sandbox settings |
 
-| Name           | Default Port | Description                                                          | Required |
-|----------------|--------------|----------------------------------------------------------------------| -------- |
-| `DEFAULT_PORT` | `16261`      | Port used by the server to listen for connections.                   | yes      |
-| `RCON_PORT`    | `27015`      | Port used by the server to listen for RCON connections/commands.     | no       |
-| `UDP_PORT`     | `16262`      | Additional Port used by the server to facilitate Client connections. | yes      |
+Never mount the same configuration directory into two running containers. The entrypoint takes an exclusive lock and fails rather than allowing concurrent writes.
 
-All Ports are configurable to use different Port numbers, however you must be aware that by changing a Port in the game
-configuration files, that you must also expose the changed (or default) Port in the Docker run command `--publish ...`
-or present under the `services.zomboid-server.ports` configuration key of the Docker-Compose file. Also, _**it is
-essential that these Ports are not blocked by a firewall**_. If you are behind a router and/or firewall, you will almost
-definitely need to open these Ports in order for anyone else outside your network to connect to the server. Port
-forwarding, and opening Ports in hosted servers is not within the scope of this project. To get instructions for your
-specific use case you will need to ask your ISP, Server Provider, or consult the instructions on your Third-Party
-Router.
+## Updates and image tags
 
-The strictly required Ports (`QUERY_PORT` and `GAME_PORT`) are used by the server to listen for connections and
-communicate with connected clients. These Ports must be assigned a value, and must be accessible from the Internet
-(i.e. "forwarded").
+On startup, `UPDATE_ON_START=true` runs SteamCMD against `GAME_VERSION=public` and validates app `380870`. Set `UPDATE_ON_START=false` only after an installation exists when you need to choose the maintenance window yourself.
 
-If you intend to use RCON to interact with the server, then it follows that that Port (`RCON_PORT`) must also be open
-for connections. This is not required if you do not intend to use RCON, and in this scenario, keeping it closed enhances
-the security of your server. If you do not wish to use RCON, then it does not need to be present in the Docker run
-command, nor in the Docker-Compose file.
+Version tags such as `42.20.2` mean that this wrapper revision completed a clean install and real server-start smoke test against that Project Zomboid version, Steam build ID, and Linux depot manifest. The proprietary game files are not embedded in the image, so a future start with updates enabled may receive a newer public Steam build. The immutable unit is the Docker image digest plus the installed persistent volume, not the moving `public` Steam branch.
 
-## Instructions
+Automation also publishes a trace tag containing the tested tuple and source revision:
 
-The server can be run using plain Docker, or using Docker-Compose. The end-result is the same, but Docker-Compose is
-recommended for ease of configuration.
+```text
+42.20.2-b24574884-m4894029153115054997-g<git-sha>
+```
 
-### Optional environment variables
+Scheduled checks bind three values before building:
 
-| Argument         | Description                                  | Values            | Default       |
-| ---------------- | -------------------------------------------- | ----------------- | ------------- |
-| `ADMIN_PASSWORD` | Server Admin account password                | [a-zA-Z0-9]+      | changeme      |
-| `ADMIN_USERNAME` | Server Admin account username                | [a-zA-Z0-9]+      | superuser     |
-| `BIND_IP`        | IP to bind the server to                     | 0.0.0.0           | 0.0.0.0       |
-| `GAME_VERSION`   | Game version to serve                        | [a-zA-Z0-9_]+     | `public`      |
-| `GC_CONFIG`      | Specifices Java GC to use                    | [a-zA-Z0-9_]+     | ZGC           |
-| `MAP_NAMES`      | Map Names (e.g. North;South)                 | map1;map2;map3    | Muldraugh, KY |
-| `MAX_RAM`        | Maximum amount of RAM to be used             | ([0-9]+)m         | 4096m         |
-| `STEAM_VAC`      | Use Steam VAC anti-cheat                     | (true&vert;false) | true          |
-| `TZ`             | Set the timezone for the container           | [A-Z]+            | UTC           |
-| `USE_STEAM`      | Create a Steam Server, or a Non-Steam Server | (true&vert;false) | true          |
+1. Stable version from the official Steam News feed for app `108600`.
+2. Public branch build ID from Steam app `380870` metadata.
+3. Linux depot `380873` public manifest ID.
 
-### Config file environment variables
+The workflow installs the server into a fresh volume, verifies all three values, starts it on native amd64, checks readiness and version, performs a console `save`/`quit`, and rechecks upstream metadata. It then converges the trace, version, and `latest` tags from one immutable digest; scheduled retries skip only when all three tags already resolve to that digest.
 
-The following environment variables will automatically overwrite values in the server's config.ini file (located
-at `/home/steam/Zomboid/Server/[name].ini`).
-Editing these values directly in the .ini file will result in them being overwritten with either the default value, or
-the configured environment variable.
+## Major-version migration
 
-Any other values *can* and *should* be edited directly in the .ini file.
+Build 41 and Build 42 saves are not compatible. The wrapper never deletes or migrates saves automatically. If an existing installation has saves but no matching major-version marker, startup fails before SteamCMD changes the installation.
 
-| Argument            | Description                                                                                                                             | .ini variable         | Values                 | Default       |
-|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------| --------------------- | ---------------------- | ------------- |
-| `AUTOSAVE_INTERVAL` | Interval between autosaves in minutes                                                                                                   | SaveWorldEveryMinutes | [0-9]+                 | 15m           |
-| `DEFAULT_PORT`      | Port for other players to connect to                                                                                                    | DefaultPort           | 1000 - 65535           | 16261         |
-| `MAX_PLAYERS`       | Maximum players allowed in the Server                                                                                                   | MaxPlayers            | [0-9]+                 | 16            |
-| `MOD_NAMES`         | Workshop Mod Names (e.g. ClaimNonResidential;MoreDescriptionForTraits)                                                                  | Mods                  | mod1;mod2;mod          |               |
-| `MOD_WORKSHOP_IDS`  | Workshop Mod IDs (e.g. 2160432461;2685168362)                                                                                           | WorkshopItems         | 2160432461;2685168362; |               |
-| `PAUSE_ON_EMPTY`    | Pause the Server when no Players are connected                                                                                          | PauseEmpty            | (true&vert;false)      | true          |
-| `PUBLIC_SERVER`     | If set to `false` only Pre-Approved/Allowed players can join the server (**NOTE:** Do not confuse with the `Public` option in the .ini) | Open                  | (true&vert;false)      | true          |
-| `RCON_PASSWORD`     | Password for authenticating incoming RCON commands                                                                                      | RCONPassword          | [a-zA-Z0-9]+           | changeme_rcon |
-| `RCON_PORT`         | Port to listen on for RCON commands                                                                                                     | RCONPort              | (true&vert;false)      | 27015         |
-| `SERVER_NAME`       | Publicly visible Server Name                                                                                                            | PublicName            | [a-zA-Z0-9]+           | ZomboidServer |
-| `SERVER_PASSWORD`   | Server password                                                                                                                         | Password              | [a-zA-Z0-9]+           |               |
-| `UDP_PORT`          | Additional Port for facilitating Client connections                                                                                     | SteamPort1            | 1000 - 65535           | 8766          |
+After making an external backup and confirming the migration, acknowledge the target major once:
 
-### Podman
+```bash
+-e ACKNOWLEDGE_MAJOR_UPDATE=42
+```
 
-The following instructions are for running the container with Podman.
+Remove the variable after the first successful start. Use `GAME_VERSION=legacy41` to remain on the preserved Build 41 branch.
 
-1. Acquire the image locally:
+## Configuration
 
-    - Pull the image from DockerHub:
+`ADMIN_PASSWORD` is required. Existing INI files keep comments, ordering, and unknown keys. Defaults are written only when a new server INI is created; afterward, only explicitly supplied environment variables override managed values. The Compose file omits managed variables unless they exist in the host environment.
 
-      ```shell
-      podman pull sknnr/project-zomboid-server:<tagname>
-      ```
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ADMIN_PASSWORD` | required | Administrator account password passed to the server |
+| `ADMIN_USERNAME` | `admin` | Administrator account name |
+| `SERVER_NAME` | `ZomboidServer` | Config/save prefix and initial public name |
+| `SERVER_PASSWORD` | empty | Join password |
+| `GAME_VERSION` | `public` | Steam branch, for example `legacy41` |
+| `UPDATE_ON_START` | `true` | Run SteamCMD before starting |
+| `VALIDATE_FILES` | `true` | Ask SteamCMD to validate installed files |
+| `MAX_RAM` | `4096m` | JVM maximum heap, for example `4g` or `6144m` |
+| `GC_CONFIG` | `ZGC` | `ZGC`, `G1GC`, `ParallelGC`, or `SerialGC` |
+| `DEFAULT_PORT` | `16261` | Main UDP game port |
+| `UDP_PORT` | `16262` | Additional UDP client port |
+| `MAX_PLAYERS` | `16` | Maximum player count, 1-100 |
+| `AUTOSAVE_INTERVAL` | `15` | Autosave interval in minutes |
+| `MAP_NAMES` | `Muldraugh, KY` | Semicolon-separated map names |
+| `MOD_NAMES` | empty | Semicolon-separated mod IDs |
+| `MOD_WORKSHOP_IDS` | empty | Semicolon-separated Workshop item IDs |
+| `PAUSE_ON_EMPTY` | `true` | Pause game time with no players |
+| `PUBLIC_SERVER` | `true` | Allow clients without a pre-created whitelist account (`Open`) |
+| `PUBLIC_LISTED` | `false` | List the server publicly (`Public`) |
+| `STEAM_VAC` | `true` | Enable Steam VAC integration |
+| `USE_STEAM` | `true` | Set `false` for `-nosteam` mode |
+| `RCON_PASSWORD` | empty | Optional RCON password; RCON is not published by Compose |
+| `RCON_PORT` | `27015` | Optional RCON port |
+| `BIND_IP` | container IP | Explicit server bind address |
+| `SHUTDOWN_TIMEOUT` | `60` | Seconds allowed for console `save` and `quit` |
 
-    - Or alternatively, build the image:
+RCON is disabled by default because its password is empty, and the Compose example does not publish the RCON port. If enabled, expose TCP port `27015` deliberately and use a strong password.
 
-      ```shell
-      git clone https://https://github.com/jsknnr/zomboid-dedicated-server.git \
-          && cd zomboid-dedicated-server
+## Graceful shutdown
 
-      BUILDAH_LAYERS=true buildah bud \
-          --file docker/zomboid-dedicated-server.Dockerfile \
-          --tag docker.io/sknnr/project-zomboid-server:<tag> \
-          .
-      ```
+TERM and INT are handled from the start of the entrypoint. After readiness, the wrapper sends `save` and `quit` through a private console FIFO, waits up to `SHUTDOWN_TIMEOUT`, then falls back to TERM and KILL. During SteamCMD or game startup it uses bounded TERM/KILL shutdown instead. Expected operator-requested TERM exits as `0`; timeouts and unexpected child failures remain non-zero.
 
-2. Run the container:
+Use at least a 90-second container stop timeout:
 
-   **\*Note**: Arguments inside square brackets are optional. If the default ports are to be overridden, then the
-   `published` ports below must also be changed\*
+```bash
+docker stop --time 90 zomboid-dedicated-server
+```
 
-   ```shell
-   mkdir ZomboidConfig ZomboidDedicatedServer
-   podman unshare chown -R 1000:1000 $(pwd)/ZomboidConfig $(pwd)/ZomboidDedicatedServer
+## Local development
 
-   podman run --detach \
-       --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
-       --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
-       --publish 16261:16261/udp --publish 16262:16262/udp [--publish 27015:27015/tcp] \
-       --name zomboid-server \
-       [--restart=no] \
-       [--env=ADMIN_PASSWORD=<value>] \
-       [--env=ADMIN_USERNAME=<value>] \
-       [--env=AUTOSAVE_INTERVAL=<value>] \
-       [--env=BIND_IP=<value>] \
-       [--env=GAME_PORT=<value>] \
-       [--env=GAME_VERSION=<value>] \
-       [--env=GC_CONFIG=<value>] \
-       [--env=MAP_NAMES=<value>] \
-       [--env=MAX_PLAYERS=<value>] \
-       [--env=MAX_RAM=<value>] \
-       [--env=MOD_NAMES=<value>] \
-       [--env=MOD_WORKSHOP_IDS=<value>] \
-       [--env=PAUSE_ON_EMPTY=<value>] \
-       [--env=PUBLIC_SERVER=<value>] \
-       [--env=QUERY_PORT=<value>] \
-       [--env=RCON_PASSWORD=<value>] \
-       [--env=RCON_PORT=<value>] \
-       [--env=SERVER_NAME=<value>] \
-       [--env=SERVER_PASSWORD=<value>] \
-       [--env=STEAM_VAC=<value>] \
-       [--env=TZ=<value>] \
-       [--env=USE_STEAM=<value>] \
-       docker.io/sknnr/project-zomboid-server[:<tagname>]
-   ```
+```bash
+scripts/test.sh
+docker build --platform linux/amd64 \
+  -f docker/zomboid-dedicated-server.Dockerfile \
+  -t zomboid-dedicated-server:local .
+```
 
-3. Optionally, reattach the terminal to the log output (**\*Note**: this is not an Interactive Terminal\*)
+A full smoke test downloads roughly 7 GiB of server data:
 
-   ```shell
-   podman logs --follow zomboid-server
-   ```
+```bash
+scripts/smoke-image.sh zomboid-dedicated-server:local VERSION BUILD_ID LINUX_MANIFEST_ID
+```
 
-4. Once you see `LuaNet: Initialization [DONE]` in the console, people can start to join the server.
+## License
 
-### Docker
-
-The following are instructions for running the server using the Docker image.
-
-1. Acquire the image locally:
-
-    - Pull the image from DockerHub:
-
-      ```shell
-      docker pull sknnr/project-zomboid-server:<tagname>
-      ```
-
-    - Or alternatively, build the image:
-
-      ```shell
-      git clone https://https://github.com/jsknnr/zomboid-dedicated-server.git \
-          && cd zomboid-dedicated-server
-
-      docker build -t docker.io/sknnr/project-zomboid-server:<tag> -f docker/zomboid-dedicated-server.Dockerfile .
-      ```
-
-2. Run the container:
-
-   **\*Note**: Arguments inside square brackets are optional. If the default ports are to be overridden, then the
-   `published` ports below must also be changed\*
-
-   ```shell
-   mkdir ZomboidConfig ZomboidDedicatedServer
-   chown -R 1000:1000 $(pwd)/ZomboidConfig $(pwd)/ZomboidDedicatedServer
-
-   docker run --detach \
-       --mount type=bind,source="$(pwd)/ZomboidDedicatedServer",target=/home/steam/ZomboidDedicatedServer \
-       --mount type=bind,source="$(pwd)/ZomboidConfig",target=/home/steam/Zomboid \
-       --publish 16261:16261/udp --publish 16262:16262/udp [--publish 27015:27015/tcp] \
-       --name zomboid-server \
-       [--restart=no] \
-       [--env=ADMIN_PASSWORD=<value>] \
-       [--env=ADMIN_USERNAME=<value>] \
-       [--env=AUTOSAVE_INTERVAL=<value>] \
-       [--env=BIND_IP=<value>] \
-       [--env=GAME_PORT=<value>] \
-       [--env=GAME_VERSION=<value>] \
-       [--env=GC_CONFIG=<value>] \
-       [--env=MAP_NAMES=<value>] \
-       [--env=MAX_PLAYERS=<value>] \
-       [--env=MAX_RAM=<value>] \
-       [--env=MOD_NAMES=<value>] \
-       [--env=MOD_WORKSHOP_IDS=<value>] \
-       [--env=PAUSE_ON_EMPTY=<value>] \
-       [--env=PUBLIC_SERVER=<value>] \
-       [--env=QUERY_PORT=<value>] \
-       [--env=RCON_PASSWORD=<value>] \
-       [--env=RCON_PORT=<value>] \
-       [--env=SERVER_NAME=<value>] \
-       [--env=SERVER_PASSWORD=<value>] \
-       [--env=STEAM_VAC=<value>] \
-       [--env=TZ=<value>] \
-       [--env=USE_STEAM=<value>] \
-       docker.io/sknnr/project-zomboid-server[:<tagname>]
-   ```
-
-3. Optionally, reattach the terminal to the log output (**\*Note**: this is not an Interactive Terminal\*)
-
-   ```shell
-   docker logs --follow zomboid-server
-   ```
-
-4. Once you see `LuaNet: Initialization [DONE]` in the console, people can start to join the server.
-
-### Docker-Compose
-
-The following are instructions for running the server using Docker-Compose.
-
-1. Download the repository:
-
-   ```shell
-   git clone https://github.com/jsknnr/zomboid-dedicated-server.git \
-       && cd zomboid-dedicated-server
-   ```
-
-2. Make any configuration changes you want to in the `docker-compose.yaml` file. In
-   the `services.zomboid-server.environment` section, you can change values for the server configuration.
-
-   **\*Note**: If the default ports are to be overridden, then the `published` ports must also be changed\*
-
-3. Run the following commands:
-
-    - Make the data and configuration directories:
-
-      ```shell
-      mkdir ZomboidConfig ZomboidDedicatedServer
-      chown -R 1000:1000 $(pwd)/ZomboidConfig $(pwd)/ZomboidDedicatedServer
-      ```
-
-    - Pull the image from DockerHub:
-
-      ```shell
-      docker-compose up --detach
-      ```
-
-    - Or alternatively, build the image:
-
-      ```shell
-      docker-compose up --build --detach
-      ```
-
-4. Optionally, reattach the terminal to the log output (**\*Note**: this is not an Interactive Terminal\*)
-
-   ```shell
-   docker-compose logs --follow
-   ```
-
-5. Once you see `LuaNet: Initialization [DONE]` in the console, people can start to join the server.
+Wrapper code is licensed under GPL-3.0-or-later. Project Zomboid and SteamCMD remain subject to their respective upstream terms.

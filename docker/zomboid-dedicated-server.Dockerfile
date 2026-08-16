@@ -1,71 +1,66 @@
-#   Project Zomboid Dedicated Server using SteamCMD Docker Image.
-#   Copyright (C) 2021-2022 Renegade-Master [renegade.master.dev@protonmail.com]
-#
-#   This program is free software: you can redistribute it and/or modify
-#   it under the terms of the GNU General Public License as published by
-#   the Free Software Foundation, either version 3 of the License, or
-#   (at your option) any later version.
-#
-#   This program is distributed in the hope that it will be useful,
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#   GNU General Public License for more details.
-#
-#   You should have received a copy of the GNU General Public License
-#   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# syntax=docker/dockerfile:1.7
+# SPDX-License-Identifier: GPL-3.0-or-later
 
-#######################################################################
-#   Author: Renegade-Master, sknnr
-#   Description: Base image for running a Dedicated Project Zomboid
-#       server.
-#   License: GNU General Public License v3.0 (see LICENSE)
-#######################################################################
-#    Updated by: Criogaid
-#    Date of update: January 17, 2024
-#    Purpose of update: Compatibility with Chinese environment
-#######################################################################
-
-# Images
-ARG BASE_IMAGE="docker.io/cm2network/steamcmd:latest"
-ARG RCON_IMAGE="docker.io/outdead/rcon:latest"
-
-FROM ${RCON_IMAGE} as rcon
-
+ARG BASE_IMAGE="docker.io/cm2network/steamcmd@sha256:45f6515d6c4dcde659c9ad6872bdbeacd1bf5c4e7f241829c4d2f28fb5eda581"
 FROM ${BASE_IMAGE}
 
-# Add metadata labels
-LABEL com.renegademaster.zomboid-dedicated-server.authors="Renegade-Master" \
-    com.renegademaster.zomboid-dedicated-server.contributors="JohnEarle, ramielrowe, sknnr, Criogaid" \
-    com.renegademaster.zomboid-dedicated-server.source-repository="https://github.com/jsknnr/zomboid-dedicated-server" \
-    com.renegademaster.zomboid-dedicated-server.image-repository="https://hub.docker.com/sknnr/project-zomboid-server"
+ARG TARGETARCH
+ARG PZ_VERSION="dev"
+ARG STEAM_BUILD_ID="unknown"
+ARG LINUX_MANIFEST_ID="unknown"
+ARG SOURCE_REVISION="unknown"
 
-# Copy rcon files
-COPY --from=rcon /rcon /usr/bin/rcon
-
-# Copy the source files
-COPY --chown=steam:steam src /home/steam/
+LABEL org.opencontainers.image.title="Project Zomboid Dedicated Server" \
+    org.opencontainers.image.description="Rootless SteamCMD wrapper for Project Zomboid Dedicated Server" \
+    org.opencontainers.image.source="https://github.com/Criogaid/zomboid-dedicated-server" \
+    org.opencontainers.image.url="https://hub.docker.com/r/criogaid/zomboid-dedicated-server" \
+    org.opencontainers.image.licenses="GPL-3.0-or-later" \
+    org.opencontainers.image.version="${PZ_VERSION}" \
+    org.opencontainers.image.revision="${SOURCE_REVISION}" \
+    io.criogaid.zomboid.steam-build-id="${STEAM_BUILD_ID}" \
+    io.criogaid.zomboid.linux-manifest-id="${LINUX_MANIFEST_ID}" \
+    io.criogaid.zomboid.runtime-update-policy="steam-public-at-start"
 
 USER root
 
-# Install Python, and take ownership of rcon binary
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3-minimal \
-        iputils-ping \
-        tzdata \
-        musl \
-        vim \
+RUN test "${TARGETARCH}" = "amd64" \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         locales \
-    && locale-gen en_US.UTF-8 \
-    && apt-get remove --purge --auto-remove -y \
+        python3 \
+        tzdata \
+        util-linux \
+        vim-tiny \
+    && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
+    && locale-gen \
+    && install -d -o steam -g steam \
+        /home/steam/Zomboid \
+        /home/steam/ZomboidDedicatedServer \
+        /home/steam/server-wrapper \
     && rm -rf /var/lib/apt/lists/*
 
-# Set language environment.
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+COPY --chown=steam:steam src/ /home/steam/server-wrapper/
+
+RUN chmod 0755 \
+        /home/steam/server-wrapper/edit_server_config.py \
+        /home/steam/server-wrapper/healthcheck.sh \
+        /home/steam/server-wrapper/run_server.sh
+
+ENV LANG="en_US.UTF-8" \
+    LANGUAGE="en_US:en" \
+    LC_ALL="en_US.UTF-8" \
+    IMAGE_PZ_VERSION="${PZ_VERSION}" \
+    IMAGE_STEAM_BUILD_ID="${STEAM_BUILD_ID}" \
+    IMAGE_LINUX_MANIFEST_ID="${LINUX_MANIFEST_ID}"
 
 USER steam
+WORKDIR /home/steam
 
-# Run the setup script
-ENTRYPOINT ["/bin/bash", "/home/steam/run_server.sh"]
+VOLUME ["/home/steam/Zomboid", "/home/steam/ZomboidDedicatedServer"]
+EXPOSE 16261/udp 16262/udp 27015/tcp
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15m --retries=3 \
+    CMD ["/home/steam/server-wrapper/healthcheck.sh"]
+
+STOPSIGNAL SIGTERM
+ENTRYPOINT ["/home/steam/server-wrapper/run_server.sh"]
