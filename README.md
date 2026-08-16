@@ -194,6 +194,5 @@ Project Zomboid and SteamCMD are not covered by this repository's GPL license an
 ## Links
 
 - [Docker Hub](https://hub.docker.com/r/criogaid/zomboid-dedicated-server)
-- [Docker Hub overview source](DOCKERHUB_OVERVIEW.md)
 - [Project Zomboid](https://projectzomboid.com/)
 - [Project Zomboid Dedicated Server on SteamDB](https://steamdb.info/app/380870/)

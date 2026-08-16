@@ -194,6 +194,5 @@ Project Zomboid 和 SteamCMD 不适用本仓库的 GPL 许可证，仍受各自�
 ## 链接
 
 - [Docker Hub](https://hub.docker.com/r/criogaid/zomboid-dedicated-server)
-- [Docker Hub Overview 源文件](DOCKERHUB_OVERVIEW.md)
 - [Project Zomboid](https://projectzomboid.com/)
 - [SteamDB 上的 Project Zomboid Dedicated Server](https://steamdb.info/app/380870/)
