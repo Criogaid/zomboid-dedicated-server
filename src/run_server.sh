@@ -301,13 +301,21 @@ run_steamcmd() {
     arguments+=( +quit )
 
     write_state installing
-    log "Installing/updating Project Zomboid branch: $GAME_VERSION"
-    setsid /home/steam/steamcmd/steamcmd.sh "${arguments[@]}" &
-    ACTIVE_PID=$!
     local status=0
-    wait "$ACTIVE_PID" || status=$?
-    ACTIVE_PID=""
-    (( status == 0 )) || fail "SteamCMD exited with status $status"
+    for attempt in 1 2 3; do
+        log "Installing/updating Project Zomboid branch: $GAME_VERSION (attempt $attempt/3)"
+        setsid /home/steam/steamcmd/steamcmd.sh "${arguments[@]}" &
+        ACTIVE_PID=$!
+        status=0
+        wait "$ACTIVE_PID" || status=$?
+        ACTIVE_PID=""
+        (( status == 0 )) && return
+        if (( attempt < 3 )); then
+            log "SteamCMD exited with status $status; retrying in $((attempt * 10)) seconds"
+            sleep "$((attempt * 10))"
+        fi
+    done
+    fail "SteamCMD exited with status $status after 3 attempts"
 }
 
 verify_installation() {

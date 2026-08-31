@@ -76,6 +76,57 @@ class ResolveVersionTests(unittest.TestCase):
         metadata = resolve_version.resolve(news, app_info_payload())
         self.assertEqual(metadata["version"], "42.20.0")
 
+    def test_accepts_combined_branch_release_title(self) -> None:
+        news = news_payload()
+        news["appnews"]["newsitems"][1].update(
+            date=1787742746,
+            title="42.20.4 STABLE & 42.19.2 UNSTABLE & 41.78.21 LEGACY Hotfixes Released",
+        )
+        app_info = app_info_payload()
+        app_info["data"]["380870"]["depots"]["branches"]["public"]["timeupdated"] = "1787742921"
+        metadata = resolve_version.resolve(news, app_info)
+        self.assertEqual(metadata["version"], "42.20.4")
+
+    def test_rejects_unreleased_stable_title(self) -> None:
+        news = news_payload()
+        news["appnews"]["newsitems"][1]["title"] = "42.20.5 STABLE Preview"
+        with self.assertRaisesRegex(ValueError, "No official stable"):
+            resolve_version.resolve(news, app_info_payload())
+
+    def test_rejects_newer_unsupported_stable_release_title(self) -> None:
+        news = news_payload()
+        news["appnews"]["newsitems"].insert(
+            0,
+            {
+                "date": 1786018018,
+                "title": "STABLE(42.20.3) Hotfix Released",
+                "feedname": "steam_community_announcements",
+            },
+        )
+        with self.assertRaisesRegex(ValueError, "Unsupported newer stable release"):
+            resolve_version.resolve(news, app_info_payload())
+
+    def test_rejects_noncanonical_stable_release_titles(self) -> None:
+        titles = (
+            "42.20.5 STABLE Preview & 42.21.0 UNSTABLE Released",
+            "42.20.5\tSTABLE Hotfix Released",
+            "42.20.5 STABLE\nHotfix Released",
+            "Build 42.20.4 STABLE & 42.19.2 UNSTABLE & 41.78.21 LEGACY Hotfixes Released",
+        )
+        for title in titles:
+            with self.subTest(title=title):
+                news = news_payload()
+                news["appnews"]["newsitems"].insert(
+                    0,
+                    {
+                        "date": 1786018018,
+                        "title": title,
+                        "feedname": "steam_community_announcements",
+                    },
+                )
+                with self.assertRaisesRegex(ValueError, "Unsupported newer stable release"):
+                    resolve_version.resolve(news, app_info_payload())
+
     def test_rejects_malformed_build_id(self) -> None:
         app_info = app_info_payload()
         app_info["data"]["380870"]["depots"]["branches"]["public"]["buildid"] = "latest"

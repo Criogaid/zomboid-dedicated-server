@@ -12,7 +12,10 @@ from typing import Any
 NEWS_URL = "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=108600&count=30&maxlength=0&format=json"
 APP_INFO_URL = "https://api.steamcmd.net/v1/info/380870"
 _VERSION_TITLE = re.compile(
-    r"^(?:Build )?(?P<version>[0-9]+(?:\.[0-9]+)+) STABLE(?: Hotfix)? Released$",
+    r"^(?:(?:Build )?(?P<single_version>[0-9]+(?:\.[0-9]+)+) STABLE(?: Hotfix)? Released"
+    r"|(?P<combined_version>[0-9]+(?:\.[0-9]+)+) STABLE"
+    r" & [0-9]+(?:\.[0-9]+)+ UNSTABLE"
+    r" & [0-9]+(?:\.[0-9]+)+ LEGACY Hotfixes Released)\Z",
     re.IGNORECASE,
 )
 
@@ -49,15 +52,24 @@ def resolve(news: dict[str, Any], app_info: dict[str, Any]) -> dict[str, str]:
         raise ValueError("Steam News response is not for app 108600")
 
     matches: list[tuple[int, str, str]] = []
+    unparsed_releases: list[tuple[int, str]] = []
     for item in app_news.get("newsitems", []):
         if not isinstance(item, dict) or item.get("feedname") != "steam_community_announcements":
             continue
-        match = _VERSION_TITLE.fullmatch(str(item.get("title", "")))
+        title = str(item.get("title", ""))
+        match = _VERSION_TITLE.fullmatch(title)
         if match:
-            matches.append((int(item.get("date", 0)), match.group("version"), str(item.get("title"))))
+            version = match.group("single_version") or match.group("combined_version")
+            matches.append((int(item.get("date", 0)), version, title))
+        elif re.search(r"\bSTABLE\b.*\bReleased\Z", title, re.IGNORECASE | re.DOTALL):
+            unparsed_releases.append((int(item.get("date", 0)), title))
     if not matches:
         raise ValueError("No official stable Project Zomboid announcement was found")
     matches.sort(reverse=True)
+    if unparsed_releases:
+        unparsed_date, unparsed_title = max(unparsed_releases)
+        if unparsed_date >= matches[0][0]:
+            raise ValueError(f"Unsupported newer stable release announcement: {unparsed_title!r}")
     news_date, version, title = matches[0]
     if news_date <= 0:
         raise ValueError("Stable announcement has an invalid timestamp")
