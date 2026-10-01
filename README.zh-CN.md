@@ -135,6 +135,8 @@ RCON 默认禁用，Compose 示例也不会发布 `27015` 端口。启用 RCON �
 2. Steam app `380870` public 分支 build ID
 3. Linux depot `380873` manifest ID
 
+公告中的两段式版本（如 `42.21`）会补齐为服务器使用的 `42.21.0`，用于镜像 label、标签和运行时版本校验。
+
 工作流随后会在全新持久卷中安装服务器、检查 appmanifest、在原生 amd64 上真实启动、验证就绪状态和版本、执行控制台 `save`/`quit`、再次核对上游元数据，最后从同一个 immutable digest 发布 trace、version 和 `latest` 三个标签。
 
 ## 主版本迁移

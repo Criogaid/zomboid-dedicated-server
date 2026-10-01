@@ -87,6 +87,42 @@ class ResolveVersionTests(unittest.TestCase):
         metadata = resolve_version.resolve(news, app_info)
         self.assertEqual(metadata["version"], "42.20.4")
 
+    def test_normalizes_two_component_stable_release_versions(self) -> None:
+        titles = (
+            "42.21 STABLE Released",
+            "Build 42.21 Stable Released",
+            "42.21 STABLE Hotfix Released",
+            "42.21 STABLE & 42.22.0 UNSTABLE & 41.78.21 LEGACY Hotfixes Released",
+        )
+        for title in titles:
+            with self.subTest(title=title):
+                news = news_payload()
+                news["appnews"]["newsitems"][1]["title"] = title
+                metadata = resolve_version.resolve(news, app_info_payload())
+                self.assertEqual(metadata["version"], "42.21.0")
+                self.assertEqual(metadata["news_title"], title)
+                self.assertEqual(metadata["build_id"], "24574884")
+                self.assertEqual(metadata["manifest_id"], "4894029153115054997")
+
+    def test_accepts_equivalent_versions_at_the_same_timestamp(self) -> None:
+        news = news_payload()
+        announcement = news["appnews"]["newsitems"][1]
+        announcement["title"] = "42.21 STABLE Released"
+        news["appnews"]["newsitems"].append(
+            {**announcement, "title": "42.21.0 STABLE Released"}
+        )
+        self.assertEqual(resolve_version.resolve(news, app_info_payload())["version"], "42.21.0")
+
+    def test_rejects_different_patch_versions_at_the_same_timestamp(self) -> None:
+        news = news_payload()
+        announcement = news["appnews"]["newsitems"][1]
+        announcement["title"] = "42.21 STABLE Released"
+        news["appnews"]["newsitems"].append(
+            {**announcement, "title": "42.21.1 STABLE Released"}
+        )
+        with self.assertRaisesRegex(ValueError, "version is ambiguous"):
+            resolve_version.resolve(news, app_info_payload())
+
     def test_rejects_unreleased_stable_title(self) -> None:
         news = news_payload()
         news["appnews"]["newsitems"][1]["title"] = "42.20.5 STABLE Preview"

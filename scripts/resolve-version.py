@@ -60,6 +60,9 @@ def resolve(news: dict[str, Any], app_info: dict[str, Any]) -> dict[str, str]:
         match = _VERSION_TITLE.fullmatch(title)
         if match:
             version = match.group("single_version") or match.group("combined_version")
+            # Release headlines can omit the zero patch component reported by the server.
+            if version.count(".") == 1:
+                version += ".0"
             matches.append((int(item.get("date", 0)), version, title))
         elif re.search(r"\bSTABLE\b.*\bReleased\Z", title, re.IGNORECASE | re.DOTALL):
             unparsed_releases.append((int(item.get("date", 0)), title))

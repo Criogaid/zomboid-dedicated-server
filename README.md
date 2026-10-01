@@ -135,6 +135,8 @@ The scheduled release workflow resolves and binds:
 2. Public build ID from Steam app `380870`
 3. Linux depot `380873` manifest ID
 
+Two-component announcement versions such as `42.21` are normalized to the server's `42.21.0` format for image labels, tags, and runtime verification.
+
 It then performs a fresh-volume installation, checks the appmanifest, starts the server on native amd64, verifies readiness and version, issues console `save` and `quit`, rechecks upstream metadata, and publishes the trace, version, and `latest` tags from one immutable digest.
 
 ## Major-Version Migration
